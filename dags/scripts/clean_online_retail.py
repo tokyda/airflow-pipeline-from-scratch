@@ -4,25 +4,31 @@ from pathlib import Path
 
 def clean_online_retail():
     """
-    Cleans Online Retail transactional data and writes a clean version.
+    Minimal, safe cleaning for Online Retail dataset.
+
+    Goal:
+    - Preserve rows
+    - Ensure CustomerID exists
+    - Do NOT over-filter
     """
 
-    raw_path = Path("/opt/airflow/data/raw/online_retail_extract.csv")
+    raw_path = Path("/opt/airflow/data/raw/online_retail.csv")
     clean_path = Path("/opt/airflow/data/clean/online_retail_clean.csv")
 
+    # Load raw data
     df = pd.read_csv(raw_path)
 
-    # Standardise column names
-    df.columns = [c.lower() for c in df.columns]
+    # Normalize column names (CRITICAL)
+    df.columns = df.columns.str.lower()
 
-    # Drop rows without customer id
-    df = df.dropna(subset=["customerid"])
+    # Keep only rows with a customerid
+    # (Online Retail has many NaNs here — this is expected)
+    df = df[df["customerid"].notna()]
 
-    # Enforce positive quantities and prices
-    df = df[df["quantity"] > 0]
-    df = df[df["unitprice"] > 0]
+    # Do NOT cast to int (will break floats like 17850.0)
+    df["customerid"] = df["customerid"].astype(str)
 
-    # Write cleaned data
+    # Write cleaned output
     df.to_csv(clean_path, index=False)
 
 
